@@ -1,0 +1,103 @@
+# Disable directory browsing
+Options -Indexes
+
+# ----------------------------------------------------------------------
+# Upload limits
+#
+# php_value hanya berlaku jika PHP berjalan sebagai mod_php. Pada
+# PHP-FPM/LiteSpeed, atur upload_max_filesize dan post_max_size melalui
+# cPanel > MultiPHP INI Editor. Dibungkus IfModule agar tidak 500.
+# ----------------------------------------------------------------------
+<IfModule mod_php.c>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 16M
+</IfModule>
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 16M
+</IfModule>
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 16M
+</IfModule>
+
+# ----------------------------------------------------------------------
+# Rewrite engine
+# ----------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    Options +FollowSymLinks
+    RewriteEngine On
+
+    # Block view-source access
+    RewriteCond %{THE_REQUEST} view-source: [NC]
+    RewriteRule ^ - [F,L]
+
+    # Redirect trailing slashes (kecuali folder)
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Kirim request ke front controller CodeIgniter
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^([\s\S]*)$ index.php/$1 [L,NC,QSA]
+
+    # Teruskan header Authorization
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    ErrorDocument 404 index.php
+</IfModule>
+
+DirectoryIndex index.php
+
+# Disable server signature
+ServerSignature Off
+
+# ----------------------------------------------------------------------
+# Blokir akses langsung ke file PHP selain index.php
+# ----------------------------------------------------------------------
+<IfModule mod_authz_core.c>
+    <FilesMatch "(?i)^(?!index\.php$).*\.(php|php3?|phtml|phps)$">
+        Require all denied
+    </FilesMatch>
+
+    <Files ".env">
+        Require all denied
+    </Files>
+
+    <Files ".user.ini">
+        Require all denied
+    </Files>
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    <FilesMatch "(?i)^(?!index\.php$).*\.(php|php3?|phtml|phps)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+
+    <Files ".env">
+        Order allow,deny
+        Deny from all
+    </Files>
+
+    <Files ".user.ini">
+        Order allow,deny
+        Deny from all
+    </Files>
+</IfModule>
+
+# ----------------------------------------------------------------------
+# Security headers
+# ----------------------------------------------------------------------
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set X-Content-Type-Options "nosniff"
+    Header set Content-Security-Policy "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.tiny.cloud https://js.hcaptcha.com https://newassets.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://newassets.hcaptcha.com; img-src 'self' data: blob: https: http:; font-src 'self' data: https:; connect-src 'self' https: blob:; frame-src 'self' https:; worker-src 'self' blob:;"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(), midi=(), sync-xhr=(), microphone=(), camera=(self), magnetometer=(), gyroscope=(), fullscreen=(self), payment=()"
+</IfModule>

@@ -1,0 +1,58 @@
+# ----------------------------------------------------------------------
+# Root .htaccess untuk INLISLite
+#
+# File ini dipakai HANYA jika document root subdomain masih menunjuk ke
+# folder utama project (tempat app/, public/, vendor/). Semua request
+# diarahkan ke folder public/ agar aplikasi CodeIgniter 4 berjalan.
+#
+# Solusi yang lebih baik tetap: ubah Document Root subdomain ke
+# /home/USER/inlislite/public melalui cPanel.
+# ----------------------------------------------------------------------
+
+# Matikan directory listing (Index of /)
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Jangan ganggu validasi SSL (AutoSSL/Let's Encrypt) dan cgi-bin
+    RewriteCond %{REQUEST_URI} !^/\.well-known/
+    RewriteCond %{REQUEST_URI} !^/cgi-bin(/|$)
+
+    # Jangan proses ulang request yang sudah menuju /public/
+    RewriteCond %{REQUEST_URI} !^/public(/|$)
+
+    # Request ke halaman utama -> public/index.php
+    RewriteRule ^$ public/index.php [L]
+
+    # Semua request lain -> public/...
+    # Contoh: /opac -> public/opac
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Blokir file sensitif jika mod_rewrite tidak aktif.
+# File .env tidak boleh bisa diunduh dari browser.
+<IfModule mod_authz_core.c>
+    <FilesMatch "(^\.env|^\.git|^composer\.(json|lock)$|^package(-lock)?\.json$|^phpunit\.xml\.dist$|^spark$|^preload\.php$|^.*\.(log|sql|bak|old|ini|sh|bat|md)$)">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Fallback untuk Apache 2.2
+<IfModule !mod_authz_core.c>
+    <FilesMatch "(^\.env|^\.git|^composer\.(json|lock)$|^package(-lock)?\.json$|^phpunit\.xml\.dist$|^spark$|^preload\.php$|^.*\.(log|sql|bak|old|ini|sh|bat|md)$)">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# ----------------------------------------------------------------------
+# Redirect HTTPS (aktifkan setelah SSL/AutoSSL benar-benar aktif)
+# ----------------------------------------------------------------------
+# <IfModule mod_rewrite.c>
+#     RewriteCond %{HTTPS} !=on
+#     RewriteCond %{HTTP:X-Forwarded-Proto} !https
+#     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>
